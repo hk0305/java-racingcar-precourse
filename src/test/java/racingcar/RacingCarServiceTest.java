@@ -1,14 +1,17 @@
 package racingcar;
 
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import racingcar.domain.Car;
+import racingcar.domain.Cars;
+import racingcar.domain.PlayResult;
 import racingcar.stategy.ForwardStrategy;
 import racingcar.stategy.HoldStrategy;
 
-import java.io.ByteArrayOutputStream;
-import java.io.PrintStream;
+import java.util.NoSuchElementException;
 
 import static camp.nextstep.edu.missionutils.Randoms.pickNumberInRange;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -18,14 +21,12 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 class RacingCarServiceTest {
 
     private Car myCar;
-
-    private final PrintStream standardOut = System.out;
-    private final ByteArrayOutputStream outputStreamCaptor = new ByteArrayOutputStream();
+    private Cars racingCarList;
 
     @BeforeEach
     void setUp() {
         myCar = new Car("myCar", 0);
-        System.setOut(new PrintStream(outputStreamCaptor));
+        racingCarList = new Cars("Thor,Hulk,Loki,Widow");
     }
 
     @DisplayName("자동차는 5글자자 이하의 이름을 갖는다.")
@@ -40,7 +41,7 @@ class RacingCarServiceTest {
     @ValueSource(strings = {"Disney", "Ironman", "Hawkeye"})
     void validateCarName(final String name) {
         assertThatThrownBy(() -> new Car(name, 0))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(NoSuchElementException.class);
     }
 
     @DisplayName("자동차 이름은 쉼표(,)로 구분한다.")
@@ -58,16 +59,6 @@ class RacingCarServiceTest {
     void go() {
         myCar.move(new ForwardStrategy());
         assertThat(myCar.getPosition()).isEqualTo(1);
-    }
-
-    @DisplayName("전진하는 자동차를 출력할 때 자동차 이름을 같이 출력한다.")
-    @Test
-    void goAndPrintName() {
-        myCar.move(new ForwardStrategy());
-        Assertions.assertEquals(
-                "[myCar] 전진!".trim(),
-                outputStreamCaptor.toString().trim()
-        );
     }
 
     @DisplayName("자동차가 움직이지 않는다.")
@@ -91,9 +82,39 @@ class RacingCarServiceTest {
         }
     }
 
-    @AfterEach
-    public void tearDown() {
-        System.setOut(standardOut);
+    @DisplayName("단독 우승자를 가져옵니다.")
+    @Test
+    void getOneWinner() {
+        // given
+        for (int k = 0; k < 1; k++) {
+            Car car = racingCarList.getCarList()
+                    .get(k);
+            if (k == 0)
+                car.move(new ForwardStrategy());
+        }
+
+        // when
+        PlayResult playResult = new PlayResult(racingCarList.getCarList());
+
+        // then
+        assertThat(playResult.getWinnerNames()).isEqualTo("Thor");
+    }
+
+    @DisplayName("공동 우승자를 가져옵니다.")
+    @Test
+    void getCoWinner() {
+        // given, when
+        for (int k = 0; k < 2; k++) {
+            Car car = racingCarList.getCarList()
+                    .get(k);
+            car.move(new ForwardStrategy());
+        }
+
+        // when
+        PlayResult playResult = new PlayResult(racingCarList.getCarList());
+
+        // then
+        assertThat(playResult.getWinnerNames()).isEqualTo("Thor, Hulk");
     }
 
 }
